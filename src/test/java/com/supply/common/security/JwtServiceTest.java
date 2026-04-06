@@ -9,7 +9,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 class JwtServiceTest {
 
-    private static final String SECRET = "test-secret-for-junit-32-chars!!";
+    private static final String SECRET = "test-secret-for-junit-min-32-chars!";
     private static final long EXPIRATION = 86400000L;
 
     private JwtService jwtService;
