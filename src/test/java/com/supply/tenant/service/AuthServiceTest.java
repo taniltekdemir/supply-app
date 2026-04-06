@@ -18,7 +18,7 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-@SpringBootTest
+@SpringBootTest(classes = com.supply.supply_app.SupplyAppApplication.class)
 @Testcontainers
 class AuthServiceTest {
 
