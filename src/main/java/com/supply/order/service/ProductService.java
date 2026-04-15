@@ -59,7 +59,7 @@ public class ProductService {
         productRepository.delete(product);
     }
 
-    Product findByIdOrThrow(UUID id) {
+    public Product findByIdOrThrow(UUID id) {
         return productRepository.findByIdAndTenant(id, currentTenant())
                 .orElseThrow(() -> new BusinessException(ErrorCode.PRODUCT_NOT_FOUND));
     }
@@ -68,7 +68,7 @@ public class ProductService {
         return tenantRepository.getReferenceById(TenantContext.get());
     }
 
-    ProductResponse toResponse(Product product) {
+    public ProductResponse toResponse(Product product) {
         return ProductResponse.builder()
                 .id(product.getId())
                 .name(product.getName())
