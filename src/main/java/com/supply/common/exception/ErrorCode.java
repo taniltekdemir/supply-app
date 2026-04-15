@@ -28,9 +28,13 @@ public enum ErrorCode {
     CUSTOMER_NOT_FOUND(HttpStatus.NOT_FOUND, "Müşteri bulunamadı"),
     CUSTOMER_ALREADY_EXISTS(HttpStatus.CONFLICT, "Bu müşteri zaten kayıtlı"),
 
+    // Product
+    PRODUCT_NOT_FOUND(HttpStatus.NOT_FOUND, "Ürün bulunamadı"),
+
     // Order
     ORDER_NOT_FOUND(HttpStatus.NOT_FOUND, "Sipariş bulunamadı"),
     ORDER_ALREADY_CLOSED(HttpStatus.BAD_REQUEST, "Sipariş zaten kapatılmış"),
+    ORDER_ITEM_NOT_FOUND(HttpStatus.NOT_FOUND, "Sipariş kalemi bulunamadı"),
 
     // Pricing
     PRICE_NOT_FOUND(HttpStatus.NOT_FOUND, "Bu ürün için fiyat girilmemiş"),

@@ -2,7 +2,9 @@
   "permissions": {
     "allow": [
       "WebSearch",
-      "WebFetch(domain:java.testcontainers.org)"
+      "WebFetch(domain:java.testcontainers.org)",
+      "Bash(mvn compile:*)",
+      "Bash(mvn test:*)"
     ]
   }
 }
