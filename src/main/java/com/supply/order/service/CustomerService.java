@@ -66,7 +66,7 @@ public class CustomerService {
         customerRepository.delete(customer);
     }
 
-    Customer findByIdOrThrow(UUID id) {
+    public Customer findByIdOrThrow(UUID id) {
         return customerRepository.findByIdAndTenant(id, currentTenant())
                 .orElseThrow(() -> new BusinessException(ErrorCode.CUSTOMER_NOT_FOUND));
     }
@@ -75,7 +75,7 @@ public class CustomerService {
         return tenantRepository.getReferenceById(TenantContext.get());
     }
 
-    CustomerResponse toResponse(Customer customer) {
+    public CustomerResponse toResponse(Customer customer) {
         return CustomerResponse.builder()
                 .id(customer.getId())
                 .name(customer.getName())

@@ -18,5 +18,7 @@ public interface OrderRepository extends JpaRepository<Order, UUID> {
 
     List<Order> findAllByTenantAndStatus(Tenant tenant, OrderStatus status);
 
+    List<Order> findAllByTenantAndOrderDateAndStatus(Tenant tenant, LocalDate orderDate, OrderStatus status);
+
     Optional<Order> findByIdAndTenant(UUID id, Tenant tenant);
 }

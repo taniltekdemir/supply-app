@@ -42,6 +42,7 @@ public enum ErrorCode {
     // Invoice
     INVOICE_NOT_FOUND(HttpStatus.NOT_FOUND, "Fiş bulunamadı"),
     INVOICE_ALREADY_CLOSED(HttpStatus.BAD_REQUEST, "Fiş zaten kapatılmış"),
+    INVOICE_ITEM_NOT_FOUND(HttpStatus.NOT_FOUND, "Fiş kalemi bulunamadı"),
 
     // Payment
     PAYMENT_NOT_FOUND(HttpStatus.NOT_FOUND, "Ödeme kaydı bulunamadı");
