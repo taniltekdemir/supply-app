@@ -45,7 +45,8 @@ public enum ErrorCode {
     INVOICE_ITEM_NOT_FOUND(HttpStatus.NOT_FOUND, "Fiş kalemi bulunamadı"),
 
     // Payment
-    PAYMENT_NOT_FOUND(HttpStatus.NOT_FOUND, "Ödeme kaydı bulunamadı");
+    PAYMENT_NOT_FOUND(HttpStatus.NOT_FOUND, "Ödeme kaydı bulunamadı"),
+    PAYMENT_ALREADY_PAID(HttpStatus.BAD_REQUEST, "Bu tahsilat zaten ödendi");
 
     private final HttpStatus httpStatus;
     private final String message;
