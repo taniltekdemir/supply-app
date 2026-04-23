@@ -48,3 +48,5 @@ Thumbs.db
 # Misc
 HELP.md
 CLAUDE.md
+
+.claude/settings.local.json

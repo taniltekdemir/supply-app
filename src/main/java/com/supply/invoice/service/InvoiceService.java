@@ -19,6 +19,8 @@ import com.supply.order.repository.OrderItemRepository;
 import com.supply.order.repository.OrderRepository;
 import com.supply.order.service.CustomerService;
 import com.supply.order.service.ProductService;
+import com.supply.payment.dto.AddDebtRequest;
+import com.supply.payment.service.PaymentService;
 import com.supply.pricing.repository.DailyPriceRepository;
 import com.supply.tenant.entity.Tenant;
 import com.supply.tenant.repository.TenantRepository;
@@ -44,6 +46,7 @@ public class InvoiceService {
     private final DailyPriceRepository dailyPriceRepository;
     private final OrderRepository orderRepository;
     private final OrderItemRepository orderItemRepository;
+    private final PaymentService paymentService;
 
     public InvoiceResponse createInvoice(InvoiceRequest request) {
         Tenant tenant = currentTenant();
@@ -121,7 +124,23 @@ public class InvoiceService {
     public InvoiceResponse closeInvoice(UUID invoiceId) {
         Invoice invoice = findOpenInvoiceOrThrow(invoiceId);
         invoice.close();
-        return toResponse(invoiceRepository.save(invoice));
+        Invoice saved = invoiceRepository.save(invoice);
+
+        List<InvoiceItem> items = invoiceItemRepository.findAllByInvoice(saved);
+        BigDecimal total = items.stream()
+                .map(InvoiceItem::getLineTotal)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        if (total.compareTo(BigDecimal.ZERO) > 0) {
+            paymentService.addDebt(new AddDebtRequest(
+                    saved.getCustomer().getId(),
+                    total,
+                    saved.getInvoiceDate(),
+                    saved.getId(),
+                    null));
+        }
+
+        return toResponse(saved);
     }
 
     @Transactional(readOnly = true)

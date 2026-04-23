@@ -4,7 +4,10 @@
       "WebSearch",
       "WebFetch(domain:java.testcontainers.org)",
       "Bash(mvn compile:*)",
-      "Bash(mvn test:*)"
+      "Bash(mvn test:*)",
+      "Read(//mnt/c/Users/tanil/**)",
+      "Bash(rm src/main/java/com/supply/payment/entity/Payment.java src/main/java/com/supply/payment/entity/PaymentMethod.java src/main/java/com/supply/payment/repository/PaymentRepository.java src/main/java/com/supply/payment/dto/PaymentRequest.java src/main/java/com/supply/payment/dto/PaymentResponse.java src/main/java/com/supply/payment/dto/PaymentSummaryResponse.java src/main/resources/db/migration/common/V7__create_payment_table.sql)",
+      "Bash(mvn clean *)"
     ]
   }
 }

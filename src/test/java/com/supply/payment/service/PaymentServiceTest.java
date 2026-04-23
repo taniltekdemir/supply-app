@@ -1,24 +1,21 @@
 package com.supply.payment.service;
 
-import com.supply.common.exception.BusinessException;
-import com.supply.common.exception.ErrorCode;
 import com.supply.common.tenant.TenantContext;
-import com.supply.invoice.dto.InvoiceRequest;
-import com.supply.invoice.dto.InvoiceResponse;
-import com.supply.invoice.repository.InvoiceItemRepository;
-import com.supply.invoice.repository.InvoiceRepository;
-import com.supply.invoice.service.InvoiceService;
 import com.supply.order.dto.CustomerRequest;
 import com.supply.order.repository.CustomerRepository;
-import com.supply.payment.dto.PaymentRequest;
-import com.supply.payment.dto.PaymentResponse;
-import com.supply.payment.dto.PaymentSummaryResponse;
+import com.supply.order.service.CustomerService;
+import com.supply.payment.dto.AddDebtRequest;
+import com.supply.payment.dto.AddPaymentRequest;
+import com.supply.payment.dto.CustomerAccountResponse;
+import com.supply.payment.dto.CustomerTransactionResponse;
+import com.supply.payment.dto.DailySummaryResponse;
 import com.supply.payment.entity.PaymentMethod;
-import com.supply.payment.repository.PaymentRepository;
+import com.supply.payment.entity.TransactionType;
+import com.supply.payment.repository.CustomerAccountRepository;
+import com.supply.payment.repository.CustomerTransactionRepository;
 import com.supply.tenant.dto.RegisterRequest;
 import com.supply.tenant.repository.TenantRepository;
 import com.supply.tenant.service.AuthService;
-import com.supply.order.service.CustomerService;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -35,7 +32,6 @@ import java.util.List;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 @SpringBootTest(classes = com.supply.supply_app.SupplyAppApplication.class)
 @Testcontainers
@@ -49,19 +45,13 @@ class PaymentServiceTest {
     private PaymentService paymentService;
 
     @Autowired
-    private InvoiceService invoiceService;
-
-    @Autowired
     private CustomerService customerService;
 
     @Autowired
-    private PaymentRepository paymentRepository;
+    private CustomerAccountRepository customerAccountRepository;
 
     @Autowired
-    private InvoiceItemRepository invoiceItemRepository;
-
-    @Autowired
-    private InvoiceRepository invoiceRepository;
+    private CustomerTransactionRepository customerTransactionRepository;
 
     @Autowired
     private CustomerRepository customerRepository;
@@ -72,105 +62,130 @@ class PaymentServiceTest {
     @Autowired
     private AuthService authService;
 
-    private UUID invoiceId;
+    private UUID customerId;
     private static final LocalDate TEST_DATE = LocalDate.of(2026, 4, 16);
 
     @BeforeEach
     void setUp() {
         var auth = authService.register(new RegisterRequest("Payment Tenant", "payment@test.com", "password123"));
         TenantContext.set(auth.getTenantId());
-
-        UUID customerId = customerService.create(new CustomerRequest("Test Müşteri", "555-0000", null, null)).getId();
-        invoiceId = invoiceService.createInvoice(new InvoiceRequest(customerId, TEST_DATE)).getId();
+        customerId = customerService.create(new CustomerRequest("Test Müşteri", "555-0000", null, null)).getId();
     }
 
     @AfterEach
     void tearDown() {
-        paymentRepository.deleteAll();
-        invoiceItemRepository.deleteAll();
-        invoiceRepository.deleteAll();
+        customerTransactionRepository.deleteAll();
+        customerAccountRepository.deleteAll();
         customerRepository.deleteAll();
         tenantRepository.deleteAll();
         TenantContext.clear();
     }
 
     @Test
-    void createPayment_whenCash_thenIsPaidTrue() {
-        PaymentResponse response = paymentService.createPayment(
-                new PaymentRequest(invoiceId, PaymentMethod.CASH, BigDecimal.valueOf(150.00), TEST_DATE));
+    void addDebt_whenCalled_thenBalanceIncreases() {
+        paymentService.addDebt(new AddDebtRequest(customerId, BigDecimal.valueOf(150.00), TEST_DATE, null, null));
 
-        assertThat(response.getId()).isNotNull();
-        assertThat(response.getInvoiceId()).isEqualTo(invoiceId);
-        assertThat(response.getPaymentMethod()).isEqualTo(PaymentMethod.CASH);
-        assertThat(response.getAmount()).isEqualByComparingTo(BigDecimal.valueOf(150.00));
-        assertThat(response.isPaid()).isTrue();
-        assertThat(response.getPaymentDate()).isEqualTo(TEST_DATE);
+        CustomerAccountResponse account = paymentService.getAccountByCustomer(customerId);
+
+        assertThat(account.getBalance()).isEqualByComparingTo(BigDecimal.valueOf(150.00));
+        assertThat(account.getCustomerId()).isEqualTo(customerId);
     }
 
     @Test
-    void createPayment_whenCredit_thenIsPaidFalse() {
-        PaymentResponse response = paymentService.createPayment(
-                new PaymentRequest(invoiceId, PaymentMethod.CREDIT, BigDecimal.valueOf(200.00), TEST_DATE));
+    void addPayment_whenCalled_thenBalanceDecreases() {
+        paymentService.addDebt(new AddDebtRequest(customerId, BigDecimal.valueOf(200.00), TEST_DATE, null, null));
+        paymentService.addPayment(new AddPaymentRequest(customerId, BigDecimal.valueOf(80.00), TEST_DATE, PaymentMethod.CASH, null));
 
-        assertThat(response.isPaid()).isFalse();
-        assertThat(response.getPaymentMethod()).isEqualTo(PaymentMethod.CREDIT);
+        CustomerAccountResponse account = paymentService.getAccountByCustomer(customerId);
+
+        assertThat(account.getBalance()).isEqualByComparingTo(BigDecimal.valueOf(120.00));
     }
 
     @Test
-    void markAsPaid_whenUnpaid_thenSetsIsPaidTrue() {
-        PaymentResponse credit = paymentService.createPayment(
-                new PaymentRequest(invoiceId, PaymentMethod.CREDIT, BigDecimal.valueOf(100.00), TEST_DATE));
+    void addPayment_whenExceedsDebt_thenBalanceNegative() {
+        paymentService.addDebt(new AddDebtRequest(customerId, BigDecimal.valueOf(50.00), TEST_DATE, null, null));
+        paymentService.addPayment(new AddPaymentRequest(customerId, BigDecimal.valueOf(100.00), TEST_DATE, PaymentMethod.BANK_TRANSFER, null));
 
-        PaymentResponse result = paymentService.markAsPaid(credit.getId());
+        CustomerAccountResponse account = paymentService.getAccountByCustomer(customerId);
 
-        assertThat(result.isPaid()).isTrue();
+        assertThat(account.getBalance()).isEqualByComparingTo(BigDecimal.valueOf(-50.00));
     }
 
     @Test
-    void markAsPaid_whenAlreadyPaid_thenThrowsException() {
-        PaymentResponse cash = paymentService.createPayment(
-                new PaymentRequest(invoiceId, PaymentMethod.CASH, BigDecimal.valueOf(100.00), TEST_DATE));
-
-        assertThatThrownBy(() -> paymentService.markAsPaid(cash.getId()))
-                .isInstanceOf(BusinessException.class)
-                .satisfies(ex -> assertThat(((BusinessException) ex).getErrorCode())
-                        .isEqualTo(ErrorCode.PAYMENT_ALREADY_PAID));
-    }
-
-    @Test
-    void getUnpaidCredits_whenExists_thenReturnsAll() {
-        // İki farklı müşteri için fiş oluştur
+    void getDailySummary_whenMixedTransactions_thenCalculatesCorrectly() {
         UUID customerId2 = customerService.create(new CustomerRequest("İkinci Müşteri", "555-1111", null, null)).getId();
-        UUID invoiceId2 = invoiceService.createInvoice(new InvoiceRequest(customerId2, TEST_DATE)).getId();
 
-        paymentService.createPayment(new PaymentRequest(invoiceId, PaymentMethod.CREDIT, BigDecimal.valueOf(100.00), TEST_DATE));
-        paymentService.createPayment(new PaymentRequest(invoiceId2, PaymentMethod.CREDIT, BigDecimal.valueOf(200.00), TEST_DATE));
-        paymentService.createPayment(new PaymentRequest(invoiceId, PaymentMethod.CASH, BigDecimal.valueOf(50.00), TEST_DATE));
+        paymentService.addDebt(new AddDebtRequest(customerId, BigDecimal.valueOf(200.00), TEST_DATE, null, null));
+        paymentService.addDebt(new AddDebtRequest(customerId2, BigDecimal.valueOf(150.00), TEST_DATE, null, null));
+        paymentService.addPayment(new AddPaymentRequest(customerId, BigDecimal.valueOf(50.00), TEST_DATE, PaymentMethod.CASH, null));
+        paymentService.addPayment(new AddPaymentRequest(customerId2, BigDecimal.valueOf(75.00), TEST_DATE, PaymentMethod.BANK_TRANSFER, null));
+        // farklı tarih — özete dahil edilmemeli
+        paymentService.addDebt(new AddDebtRequest(customerId, BigDecimal.valueOf(999.00), TEST_DATE.plusDays(1), null, null));
 
-        List<PaymentResponse> unpaid = paymentService.getUnpaidCredits();
-
-        assertThat(unpaid).hasSize(2);
-        assertThat(unpaid).allMatch(p -> !p.isPaid());
-    }
-
-    @Test
-    void getDailySummary_whenMixedPayments_thenCalculatesCorrectly() {
-        UUID customerId2 = customerService.create(new CustomerRequest("İkinci Müşteri", "555-2222", null, null)).getId();
-        UUID invoiceId2 = invoiceService.createInvoice(new InvoiceRequest(customerId2, TEST_DATE)).getId();
-
-        paymentService.createPayment(new PaymentRequest(invoiceId, PaymentMethod.CASH, BigDecimal.valueOf(100.00), TEST_DATE));
-        paymentService.createPayment(new PaymentRequest(invoiceId2, PaymentMethod.TRANSFER, BigDecimal.valueOf(75.00), TEST_DATE));
-        paymentService.createPayment(new PaymentRequest(invoiceId, PaymentMethod.CREDIT, BigDecimal.valueOf(50.00), TEST_DATE));
-        // Farklı tarih — özete dahil edilmemeli
-        paymentService.createPayment(new PaymentRequest(invoiceId2, PaymentMethod.CASH, BigDecimal.valueOf(999.00), TEST_DATE.plusDays(1)));
-
-        PaymentSummaryResponse summary = paymentService.getDailySummary(TEST_DATE);
+        DailySummaryResponse summary = paymentService.getDailySummary(TEST_DATE);
 
         assertThat(summary.getDate()).isEqualTo(TEST_DATE);
-        assertThat(summary.getCashTotal()).isEqualByComparingTo(BigDecimal.valueOf(100.00));
-        assertThat(summary.getTransferTotal()).isEqualByComparingTo(BigDecimal.valueOf(75.00));
-        assertThat(summary.getCreditTotal()).isEqualByComparingTo(BigDecimal.valueOf(50.00));
-        assertThat(summary.getCollectedTotal()).isEqualByComparingTo(BigDecimal.valueOf(175.00));
-        assertThat(summary.getPayments()).hasSize(3);
+        assertThat(summary.getTotalNewDebt()).isEqualByComparingTo(BigDecimal.valueOf(350.00));
+        assertThat(summary.getTotalSales()).isEqualByComparingTo(BigDecimal.valueOf(350.00));
+        assertThat(summary.getTotalCash()).isEqualByComparingTo(BigDecimal.valueOf(50.00));
+        assertThat(summary.getTotalBankTransfer()).isEqualByComparingTo(BigDecimal.valueOf(75.00));
+        assertThat(summary.getTotalCreditCard()).isEqualByComparingTo(BigDecimal.ZERO);
+        assertThat(summary.getTotalCollected()).isEqualByComparingTo(BigDecimal.valueOf(125.00));
+        // openDebtBalance: (200-50) + (150-75) + 999 = 150 + 75 + 999 = 1224
+        assertThat(summary.getOpenDebtBalance()).isEqualByComparingTo(BigDecimal.valueOf(1224.00));
+    }
+
+    @Test
+    void getAllAccounts_whenCalled_thenSortedByBalanceDesc() {
+        UUID customerId2 = customerService.create(new CustomerRequest("İkinci Müşteri", "555-1111", null, null)).getId();
+        UUID customerId3 = customerService.create(new CustomerRequest("Üçüncü Müşteri", "555-2222", null, null)).getId();
+
+        paymentService.addDebt(new AddDebtRequest(customerId, BigDecimal.valueOf(100.00), TEST_DATE, null, null));
+        paymentService.addDebt(new AddDebtRequest(customerId2, BigDecimal.valueOf(300.00), TEST_DATE, null, null));
+        paymentService.addDebt(new AddDebtRequest(customerId3, BigDecimal.valueOf(50.00), TEST_DATE, null, null));
+
+        List<CustomerAccountResponse> accounts = paymentService.getAllAccounts();
+
+        assertThat(accounts).hasSize(3);
+        assertThat(accounts.get(0).getBalance()).isEqualByComparingTo(BigDecimal.valueOf(300.00));
+        assertThat(accounts.get(1).getBalance()).isEqualByComparingTo(BigDecimal.valueOf(100.00));
+        assertThat(accounts.get(2).getBalance()).isEqualByComparingTo(BigDecimal.valueOf(50.00));
+    }
+
+    @Test
+    void addDebt_withInvoiceId_thenTransactionLinkedToInvoice() {
+        CustomerTransactionResponse response = paymentService.addDebt(
+                new AddDebtRequest(customerId, BigDecimal.valueOf(75.00), TEST_DATE, null, "test borç"));
+
+        assertThat(response.getId()).isNotNull();
+        assertThat(response.getType()).isEqualTo(TransactionType.DEBT);
+        assertThat(response.getAmount()).isEqualByComparingTo(BigDecimal.valueOf(75.00));
+        assertThat(response.getCustomer().getId()).isEqualTo(customerId);
+        assertThat(response.getNotes()).isEqualTo("test borç");
+    }
+
+    @Test
+    void getTransactionsByCustomer_whenMultipleTransactions_thenReturnsAll() {
+        paymentService.addDebt(new AddDebtRequest(customerId, BigDecimal.valueOf(100.00), TEST_DATE, null, null));
+        paymentService.addPayment(new AddPaymentRequest(customerId, BigDecimal.valueOf(40.00), TEST_DATE, PaymentMethod.CASH, null));
+        paymentService.addDebt(new AddDebtRequest(customerId, BigDecimal.valueOf(60.00), TEST_DATE.plusDays(1), null, null));
+
+        List<CustomerTransactionResponse> transactions = paymentService.getTransactionsByCustomer(customerId);
+
+        assertThat(transactions).hasSize(3);
+    }
+
+    @Test
+    void getTransactionsByDate_whenQueried_thenOnlyMatchingDate() {
+        UUID customerId2 = customerService.create(new CustomerRequest("İkinci Müşteri", "555-1111", null, null)).getId();
+
+        paymentService.addDebt(new AddDebtRequest(customerId, BigDecimal.valueOf(100.00), TEST_DATE, null, null));
+        paymentService.addDebt(new AddDebtRequest(customerId2, BigDecimal.valueOf(200.00), TEST_DATE, null, null));
+        paymentService.addDebt(new AddDebtRequest(customerId, BigDecimal.valueOf(999.00), TEST_DATE.plusDays(1), null, null));
+
+        List<CustomerTransactionResponse> result = paymentService.getTransactionsByDate(TEST_DATE);
+
+        assertThat(result).hasSize(2);
+        assertThat(result).allMatch(t -> t.getDate().isEqual(TEST_DATE));
     }
 }

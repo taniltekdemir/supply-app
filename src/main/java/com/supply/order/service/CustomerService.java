@@ -7,6 +7,8 @@ import com.supply.order.dto.CustomerRequest;
 import com.supply.order.dto.CustomerResponse;
 import com.supply.order.entity.Customer;
 import com.supply.order.repository.CustomerRepository;
+import com.supply.payment.entity.CustomerAccount;
+import com.supply.payment.repository.CustomerAccountRepository;
 import com.supply.tenant.entity.Tenant;
 import com.supply.tenant.repository.TenantRepository;
 import lombok.RequiredArgsConstructor;
@@ -22,6 +24,7 @@ import java.util.UUID;
 public class CustomerService {
 
     private final CustomerRepository customerRepository;
+    private final CustomerAccountRepository customerAccountRepository;
     private final TenantRepository tenantRepository;
 
     public CustomerResponse create(CustomerRequest request) {
@@ -31,15 +34,20 @@ public class CustomerService {
             throw new BusinessException(ErrorCode.CUSTOMER_ALREADY_EXISTS);
         }
 
-        Customer customer = Customer.builder()
+        Customer customer = customerRepository.save(Customer.builder()
                 .tenant(tenant)
                 .name(request.getName())
                 .phone(request.getPhone())
                 .address(request.getAddress())
                 .notes(request.getNotes())
-                .build();
+                .build());
 
-        return toResponse(customerRepository.save(customer));
+        customerAccountRepository.save(CustomerAccount.builder()
+                .tenant(tenant)
+                .customer(customer)
+                .build());
+
+        return toResponse(customer);
     }
 
     @Transactional(readOnly = true)

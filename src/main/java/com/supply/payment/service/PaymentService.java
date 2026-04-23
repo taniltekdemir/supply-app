@@ -5,12 +5,19 @@ import com.supply.common.exception.ErrorCode;
 import com.supply.common.tenant.TenantContext;
 import com.supply.invoice.entity.Invoice;
 import com.supply.invoice.repository.InvoiceRepository;
-import com.supply.payment.dto.PaymentRequest;
-import com.supply.payment.dto.PaymentResponse;
-import com.supply.payment.dto.PaymentSummaryResponse;
-import com.supply.payment.entity.Payment;
+import com.supply.order.entity.Customer;
+import com.supply.order.service.CustomerService;
+import com.supply.payment.dto.AddDebtRequest;
+import com.supply.payment.dto.AddPaymentRequest;
+import com.supply.payment.dto.CustomerAccountResponse;
+import com.supply.payment.dto.CustomerTransactionResponse;
+import com.supply.payment.dto.DailySummaryResponse;
+import com.supply.payment.entity.CustomerAccount;
+import com.supply.payment.entity.CustomerTransaction;
 import com.supply.payment.entity.PaymentMethod;
-import com.supply.payment.repository.PaymentRepository;
+import com.supply.payment.entity.TransactionType;
+import com.supply.payment.repository.CustomerAccountRepository;
+import com.supply.payment.repository.CustomerTransactionRepository;
 import com.supply.tenant.entity.Tenant;
 import com.supply.tenant.repository.TenantRepository;
 import lombok.RequiredArgsConstructor;
@@ -27,114 +34,172 @@ import java.util.UUID;
 @Transactional
 public class PaymentService {
 
-    private final PaymentRepository paymentRepository;
+    private final CustomerAccountRepository customerAccountRepository;
+    private final CustomerTransactionRepository customerTransactionRepository;
+    private final CustomerService customerService;
     private final InvoiceRepository invoiceRepository;
     private final TenantRepository tenantRepository;
 
-    public PaymentResponse createPayment(PaymentRequest request) {
+    public CustomerTransactionResponse addDebt(AddDebtRequest request) {
         Tenant tenant = currentTenant();
-        Invoice invoice = findInvoiceOrThrow(request.getInvoiceId(), tenant);
+        Customer customer = customerService.findByIdOrThrow(request.getCustomerId());
+        CustomerAccount account = findAccountOrThrow(customer, tenant);
+        Invoice invoice = resolveInvoice(request.getInvoiceId(), tenant);
 
-        boolean isPaid = request.getPaymentMethod() != PaymentMethod.CREDIT;
-
-        Payment payment = Payment.builder()
+        CustomerTransaction transaction = CustomerTransaction.builder()
                 .tenant(tenant)
-                .invoice(invoice)
-                .paymentMethod(request.getPaymentMethod())
+                .customer(customer)
+                .type(TransactionType.DEBT)
                 .amount(request.getAmount())
-                .isPaid(isPaid)
-                .paymentDate(request.getPaymentDate())
+                .date(request.getDate())
+                .invoice(invoice)
+                .notes(request.getNotes())
                 .build();
 
-        return toResponse(paymentRepository.save(payment));
+        customerTransactionRepository.save(transaction);
+        account.addDebt(request.getAmount());
+        customerAccountRepository.save(account);
+
+        return toTransactionResponse(transaction);
     }
 
-    public PaymentResponse markAsPaid(UUID paymentId) {
-        Payment payment = findByIdOrThrow(paymentId);
-
-        if (payment.isPaid()) {
-            throw new BusinessException(ErrorCode.PAYMENT_ALREADY_PAID);
-        }
-
-        payment.markAsPaid();
-        return toResponse(paymentRepository.save(payment));
-    }
-
-    @Transactional(readOnly = true)
-    public PaymentResponse getById(UUID id) {
-        return toResponse(findByIdOrThrow(id));
-    }
-
-    @Transactional(readOnly = true)
-    public List<PaymentResponse> getByInvoice(UUID invoiceId) {
+    public CustomerTransactionResponse addPayment(AddPaymentRequest request) {
         Tenant tenant = currentTenant();
-        Invoice invoice = findInvoiceOrThrow(invoiceId, tenant);
-        return paymentRepository.findAllByTenantAndInvoice(tenant, invoice)
+        Customer customer = customerService.findByIdOrThrow(request.getCustomerId());
+        CustomerAccount account = findAccountOrThrow(customer, tenant);
+
+        CustomerTransaction transaction = CustomerTransaction.builder()
+                .tenant(tenant)
+                .customer(customer)
+                .type(TransactionType.PAYMENT)
+                .amount(request.getAmount())
+                .date(request.getDate())
+                .paymentMethod(request.getPaymentMethod())
+                .notes(request.getNotes())
+                .build();
+
+        customerTransactionRepository.save(transaction);
+        account.addPayment(request.getAmount());
+        customerAccountRepository.save(account);
+
+        return toTransactionResponse(transaction);
+    }
+
+    @Transactional(readOnly = true)
+    public CustomerAccountResponse getAccountByCustomer(UUID customerId) {
+        Customer customer = customerService.findByIdOrThrow(customerId);
+        CustomerAccount account = findAccountOrThrow(customer, currentTenant());
+        return toAccountResponse(account);
+    }
+
+    @Transactional(readOnly = true)
+    public List<CustomerAccountResponse> getAllAccounts() {
+        return customerAccountRepository.findAllByTenantOrderByBalanceDesc(currentTenant())
                 .stream()
-                .map(this::toResponse)
+                .map(this::toAccountResponse)
                 .toList();
     }
 
     @Transactional(readOnly = true)
-    public List<PaymentResponse> getUnpaidCredits() {
-        return paymentRepository.findAllByTenantAndIsPaidFalse(currentTenant())
+    public List<CustomerTransactionResponse> getTransactionsByCustomer(UUID customerId) {
+        Customer customer = customerService.findByIdOrThrow(customerId);
+        return customerTransactionRepository.findAllByCustomerAndTenant(customer, currentTenant())
                 .stream()
-                .map(this::toResponse)
+                .map(this::toTransactionResponse)
                 .toList();
     }
 
     @Transactional(readOnly = true)
-    public PaymentSummaryResponse getDailySummary(LocalDate date) {
-        List<Payment> payments = paymentRepository.findAllByTenantAndPaymentDate(currentTenant(), date);
+    public List<CustomerTransactionResponse> getTransactionsByDate(LocalDate date) {
+        return customerTransactionRepository.findAllByTenantAndDate(currentTenant(), date)
+                .stream()
+                .map(this::toTransactionResponse)
+                .toList();
+    }
 
-        List<PaymentResponse> paymentResponses = payments.stream()
-                .map(this::toResponse)
+    @Transactional(readOnly = true)
+    public DailySummaryResponse getDailySummary(LocalDate date) {
+        Tenant tenant = currentTenant();
+        List<CustomerTransaction> transactions = customerTransactionRepository.findAllByTenantAndDate(tenant, date);
+
+        List<CustomerTransaction> debts = transactions.stream()
+                .filter(t -> t.getType() == TransactionType.DEBT)
                 .toList();
 
-        BigDecimal cashTotal = sumByMethod(payments, PaymentMethod.CASH);
-        BigDecimal transferTotal = sumByMethod(payments, PaymentMethod.TRANSFER);
-        BigDecimal creditTotal = sumByMethod(payments, PaymentMethod.CREDIT);
-        BigDecimal collectedTotal = cashTotal.add(transferTotal);
+        List<CustomerTransaction> payments = transactions.stream()
+                .filter(t -> t.getType() == TransactionType.PAYMENT)
+                .toList();
 
-        return PaymentSummaryResponse.builder()
+        BigDecimal totalNewDebt = sum(debts);
+        BigDecimal totalCash = sumByMethod(payments, PaymentMethod.CASH);
+        BigDecimal totalBankTransfer = sumByMethod(payments, PaymentMethod.BANK_TRANSFER);
+        BigDecimal totalCreditCard = sumByMethod(payments, PaymentMethod.CREDIT_CARD);
+        BigDecimal totalCollected = totalCash.add(totalBankTransfer).add(totalCreditCard);
+
+        BigDecimal openDebtBalance = customerAccountRepository.findAllByTenantOrderByBalanceDesc(tenant)
+                .stream()
+                .map(CustomerAccount::getBalance)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        return DailySummaryResponse.builder()
                 .date(date)
-                .cashTotal(cashTotal)
-                .transferTotal(transferTotal)
-                .creditTotal(creditTotal)
-                .collectedTotal(collectedTotal)
-                .payments(paymentResponses)
+                .totalSales(totalNewDebt)
+                .totalNewDebt(totalNewDebt)
+                .totalCash(totalCash)
+                .totalBankTransfer(totalBankTransfer)
+                .totalCreditCard(totalCreditCard)
+                .totalCollected(totalCollected)
+                .openDebtBalance(openDebtBalance)
                 .build();
     }
 
-    private BigDecimal sumByMethod(List<Payment> payments, PaymentMethod method) {
-        return payments.stream()
-                .filter(p -> p.getPaymentMethod() == method)
-                .map(Payment::getAmount)
+    private CustomerAccount findAccountOrThrow(Customer customer, Tenant tenant) {
+        return customerAccountRepository.findByCustomerAndTenant(customer, tenant)
+                .orElseThrow(() -> new BusinessException(ErrorCode.ACCOUNT_NOT_FOUND));
+    }
+
+    private Invoice resolveInvoice(UUID invoiceId, Tenant tenant) {
+        if (invoiceId == null) return null;
+        return invoiceRepository.findByIdAndTenant(invoiceId, tenant)
+                .orElseThrow(() -> new BusinessException(ErrorCode.INVOICE_NOT_FOUND));
+    }
+
+    private BigDecimal sum(List<CustomerTransaction> transactions) {
+        return transactions.stream()
+                .map(CustomerTransaction::getAmount)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
     }
 
-    private Payment findByIdOrThrow(UUID id) {
-        return paymentRepository.findByIdAndTenant(id, currentTenant())
-                .orElseThrow(() -> new BusinessException(ErrorCode.PAYMENT_NOT_FOUND));
-    }
-
-    private Invoice findInvoiceOrThrow(UUID invoiceId, Tenant tenant) {
-        return invoiceRepository.findByIdAndTenant(invoiceId, tenant)
-                .orElseThrow(() -> new BusinessException(ErrorCode.INVOICE_NOT_FOUND));
+    private BigDecimal sumByMethod(List<CustomerTransaction> transactions, PaymentMethod method) {
+        return transactions.stream()
+                .filter(t -> t.getPaymentMethod() == method)
+                .map(CustomerTransaction::getAmount)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
     }
 
     private Tenant currentTenant() {
         return tenantRepository.getReferenceById(TenantContext.get());
     }
 
-    private PaymentResponse toResponse(Payment payment) {
-        return PaymentResponse.builder()
-                .id(payment.getId())
-                .invoiceId(payment.getInvoice().getId())
-                .paymentMethod(payment.getPaymentMethod())
-                .amount(payment.getAmount())
-                .isPaid(payment.isPaid())
-                .paymentDate(payment.getPaymentDate())
+    private CustomerAccountResponse toAccountResponse(CustomerAccount account) {
+        return CustomerAccountResponse.builder()
+                .customerId(account.getCustomer().getId())
+                .customerName(account.getCustomer().getName())
+                .balance(account.getBalance())
+                .lastUpdated(account.getLastUpdated())
+                .build();
+    }
+
+    private CustomerTransactionResponse toTransactionResponse(CustomerTransaction transaction) {
+        return CustomerTransactionResponse.builder()
+                .id(transaction.getId())
+                .customer(customerService.toResponse(transaction.getCustomer()))
+                .type(transaction.getType())
+                .amount(transaction.getAmount())
+                .date(transaction.getDate())
+                .paymentMethod(transaction.getPaymentMethod())
+                .invoiceId(transaction.getInvoice() != null ? transaction.getInvoice().getId() : null)
+                .notes(transaction.getNotes())
                 .build();
     }
 }

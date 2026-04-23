@@ -1,5 +1,5 @@
 package com.supply.payment.entity;
 
 public enum PaymentMethod {
-    CASH, CREDIT, TRANSFER
+    CASH, BANK_TRANSFER, CREDIT_CARD
 }

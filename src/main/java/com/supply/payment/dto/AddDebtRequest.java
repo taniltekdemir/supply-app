@@ -1,6 +1,5 @@
 package com.supply.payment.dto;
 
-import com.supply.payment.entity.PaymentMethod;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
 import lombok.AllArgsConstructor;
@@ -12,20 +11,21 @@ import java.time.LocalDate;
 import java.util.UUID;
 
 @Getter
-@NoArgsConstructor
 @AllArgsConstructor
-public class PaymentRequest {
+@NoArgsConstructor
+public class AddDebtRequest {
 
     @NotNull
-    private UUID invoiceId;
-
-    @NotNull
-    private PaymentMethod paymentMethod;
+    private UUID customerId;
 
     @NotNull
     @Positive
     private BigDecimal amount;
 
     @NotNull
-    private LocalDate paymentDate;
+    private LocalDate date;
+
+    private UUID invoiceId;
+
+    private String notes;
 }
