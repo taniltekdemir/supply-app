@@ -79,7 +79,7 @@ class OrderServiceTest {
         var auth = authService.register(req);
         TenantContext.set(auth.getTenantId());
 
-        customerId = customerService.create(new CustomerRequest("Test Müşteri", "555-0000", null, null)).getId();
+        customerId = customerService.create(new CustomerRequest("Test Müşteri", "555-0000", null, null, null)).getId();
         productId = productService.create(new ProductRequest("Domates", Unit.KG, null)).getId();
     }
 

@@ -3,6 +3,7 @@ package com.supply.invoice.repository;
 import com.supply.invoice.entity.Invoice;
 import com.supply.invoice.entity.InvoiceStatus;
 import com.supply.order.entity.Customer;
+import com.supply.order.entity.Order;
 import com.supply.tenant.entity.Tenant;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
@@ -24,4 +25,6 @@ public interface InvoiceRepository extends JpaRepository<Invoice, UUID> {
     List<Invoice> findAllByTenantAndInvoiceDateBetween(Tenant tenant, LocalDate start, LocalDate end);
 
     List<Invoice> findAllByTenantAndCustomerAndInvoiceDate(Tenant tenant, Customer customer, LocalDate date);
+
+    boolean existsByOrderAndTenant(Order order, Tenant tenant);
 }

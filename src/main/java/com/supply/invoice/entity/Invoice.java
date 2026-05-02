@@ -2,6 +2,7 @@ package com.supply.invoice.entity;
 
 import com.supply.common.entity.BaseEntity;
 import com.supply.order.entity.Customer;
+import com.supply.order.entity.Order;
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -32,6 +33,10 @@ public class Invoice extends BaseEntity {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "customer_id", nullable = false)
     private Customer customer;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "order_id")
+    private Order order;
 
     @Column(nullable = false)
     private LocalDate invoiceDate;

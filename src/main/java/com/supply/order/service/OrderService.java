@@ -51,15 +51,23 @@ public class OrderService {
         Order order = findOpenOrderOrThrow(orderId);
         var product = productService.findByIdOrThrow(request.getProductId());
 
-        OrderItem item = OrderItem.builder()
-                .tenant(currentTenant())
-                .order(order)
-                .product(product)
-                .quantity(request.getQuantity())
-                .notes(request.getNotes())
-                .build();
+        OrderItem item = orderItemRepository.findByOrderAndProduct(order, product)
+                .map(existing -> {
+                    existing.addQuantity(request.getQuantity());
+                    return orderItemRepository.save(existing);
+                })
+                .orElseGet(() -> {
+                    OrderItem newItem = OrderItem.builder()
+                            .tenant(currentTenant())
+                            .order(order)
+                            .product(product)
+                            .quantity(request.getQuantity())
+                            .notes(request.getNotes())
+                            .build();
+                    return orderItemRepository.save(newItem);
+                });
 
-        return toItemResponse(orderItemRepository.save(item));
+        return toItemResponse(item);
     }
 
     public void removeItemFromOrder(UUID orderId, UUID itemId) {
@@ -77,8 +85,27 @@ public class OrderService {
         return toResponse(orderRepository.save(order));
     }
 
+    public void deleteOrder(UUID orderId) {
+        Tenant tenant = currentTenant();
+        Order order = orderRepository.findByIdAndTenant(orderId, tenant)
+                .orElseThrow(() -> new BusinessException(ErrorCode.ORDER_NOT_FOUND));
+
+        if (order.getStatus() == OrderStatus.CLOSED) {
+            throw new BusinessException(ErrorCode.ORDER_ALREADY_CLOSED);
+        }
+
+        orderItemRepository.deleteAllByOrder(order);
+        orderRepository.deleteByIdAndTenant(orderId, tenant);
+    }
+
     @Transactional(readOnly = true)
-    public List<OrderResponse> getOrdersByDate(LocalDate date) {
+    public List<OrderResponse> getOrdersByDate(LocalDate date, UUID groupId) {
+        if (groupId != null) {
+            return orderRepository.findAllByTenantAndOrderDateAndCustomer_Group_Id(currentTenant(), date, groupId)
+                    .stream()
+                    .map(this::toResponse)
+                    .toList();
+        }
         return orderRepository.findAllByTenantAndOrderDate(currentTenant(), date)
                 .stream()
                 .map(this::toResponse)

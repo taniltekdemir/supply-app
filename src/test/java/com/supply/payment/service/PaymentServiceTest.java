@@ -69,7 +69,7 @@ class PaymentServiceTest {
     void setUp() {
         var auth = authService.register(new RegisterRequest("Payment Tenant", "payment@test.com", "password123"));
         TenantContext.set(auth.getTenantId());
-        customerId = customerService.create(new CustomerRequest("Test Müşteri", "555-0000", null, null)).getId();
+        customerId = customerService.create(new CustomerRequest("Test Müşteri", "555-0000", null, null, null)).getId();
     }
 
     @AfterEach
@@ -113,7 +113,7 @@ class PaymentServiceTest {
 
     @Test
     void getDailySummary_whenMixedTransactions_thenCalculatesCorrectly() {
-        UUID customerId2 = customerService.create(new CustomerRequest("İkinci Müşteri", "555-1111", null, null)).getId();
+        UUID customerId2 = customerService.create(new CustomerRequest("İkinci Müşteri", "555-1111", null, null, null)).getId();
 
         paymentService.addDebt(new AddDebtRequest(customerId, BigDecimal.valueOf(200.00), TEST_DATE, null, null));
         paymentService.addDebt(new AddDebtRequest(customerId2, BigDecimal.valueOf(150.00), TEST_DATE, null, null));
@@ -137,8 +137,8 @@ class PaymentServiceTest {
 
     @Test
     void getAllAccounts_whenCalled_thenSortedByBalanceDesc() {
-        UUID customerId2 = customerService.create(new CustomerRequest("İkinci Müşteri", "555-1111", null, null)).getId();
-        UUID customerId3 = customerService.create(new CustomerRequest("Üçüncü Müşteri", "555-2222", null, null)).getId();
+        UUID customerId2 = customerService.create(new CustomerRequest("İkinci Müşteri", "555-1111", null, null, null)).getId();
+        UUID customerId3 = customerService.create(new CustomerRequest("Üçüncü Müşteri", "555-2222", null, null, null)).getId();
 
         paymentService.addDebt(new AddDebtRequest(customerId, BigDecimal.valueOf(100.00), TEST_DATE, null, null));
         paymentService.addDebt(new AddDebtRequest(customerId2, BigDecimal.valueOf(300.00), TEST_DATE, null, null));
@@ -177,7 +177,7 @@ class PaymentServiceTest {
 
     @Test
     void getTransactionsByDate_whenQueried_thenOnlyMatchingDate() {
-        UUID customerId2 = customerService.create(new CustomerRequest("İkinci Müşteri", "555-1111", null, null)).getId();
+        UUID customerId2 = customerService.create(new CustomerRequest("İkinci Müşteri", "555-1111", null, null, null)).getId();
 
         paymentService.addDebt(new AddDebtRequest(customerId, BigDecimal.valueOf(100.00), TEST_DATE, null, null));
         paymentService.addDebt(new AddDebtRequest(customerId2, BigDecimal.valueOf(200.00), TEST_DATE, null, null));

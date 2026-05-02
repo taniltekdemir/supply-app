@@ -5,21 +5,15 @@ import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
-import java.util.UUID;
-
 @Getter
 @NoArgsConstructor
 @AllArgsConstructor
-public class CustomerRequest {
+public class CustomerGroupRequest {
 
     @NotBlank
     private String name;
 
-    private String phone;
+    private String description;
 
-    private String address;
-
-    private String notes;
-
-    private UUID groupId;
+    private String color;
 }

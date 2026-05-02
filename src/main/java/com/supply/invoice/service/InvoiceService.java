@@ -67,10 +67,15 @@ public class InvoiceService {
         Order order = orderRepository.findByIdAndTenant(orderId, tenant)
                 .orElseThrow(() -> new BusinessException(ErrorCode.ORDER_NOT_FOUND));
 
+        if (invoiceRepository.existsByOrderAndTenant(order, tenant)) {
+            throw new BusinessException(ErrorCode.INVOICE_ALREADY_EXISTS);
+        }
+
         Invoice invoice = Invoice.builder()
                 .tenant(tenant)
                 .customer(order.getCustomer())
                 .invoiceDate(order.getOrderDate())
+                .order(order)
                 .build();
 
         Invoice saved = invoiceRepository.save(invoice);

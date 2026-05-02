@@ -15,5 +15,6 @@ public class CustomerResponse {
     private String phone;
     private String address;
     private String notes;
+    private CustomerGroupResponse group;
     private LocalDateTime createdAt;
 }

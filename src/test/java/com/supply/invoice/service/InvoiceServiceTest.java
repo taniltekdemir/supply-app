@@ -105,7 +105,7 @@ class InvoiceServiceTest {
         var auth = authService.register(new RegisterRequest("Invoice Tenant", "invoice@test.com", "password123"));
         TenantContext.set(auth.getTenantId());
 
-        customerId = customerService.create(new CustomerRequest("Test Müşteri", "555-0000", null, null)).getId();
+        customerId = customerService.create(new CustomerRequest("Test Müşteri", "555-0000", null, null, null)).getId();
         productId = productService.create(new ProductRequest("Domates", Unit.KG, null)).getId();
         pricingService.createOrUpdate(new DailyPriceRequest(
                 productId, TEST_DATE,

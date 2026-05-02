@@ -93,8 +93,8 @@ class ProcurementServiceTest {
         var auth = authService.register(req);
         TenantContext.set(auth.getTenantId());
 
-        customer1Id = customerService.create(new CustomerRequest("Müşteri 1", null, null, null)).getId();
-        customer2Id = customerService.create(new CustomerRequest("Müşteri 2", null, null, null)).getId();
+        customer1Id = customerService.create(new CustomerRequest("Müşteri 1", null, null, null, null)).getId();
+        customer2Id = customerService.create(new CustomerRequest("Müşteri 2", null, null, null, null)).getId();
         pricedProductId = productService.create(new ProductRequest("Domates", Unit.KG, null)).getId();
         unpricedProductId = productService.create(new ProductRequest("Biber", Unit.KG, null)).getId();
 

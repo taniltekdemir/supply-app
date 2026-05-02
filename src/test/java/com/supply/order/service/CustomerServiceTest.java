@@ -61,7 +61,7 @@ class CustomerServiceTest {
 
     @Test
     void create_whenValidRequest_thenReturnCustomerResponse() {
-        CustomerRequest request = new CustomerRequest("Ahmet Yılmaz", "555-1234", "İstanbul", null);
+        CustomerRequest request = new CustomerRequest("Ahmet Yılmaz", "555-1234", "İstanbul", null, null);
 
         CustomerResponse response = customerService.create(request);
 
@@ -72,9 +72,9 @@ class CustomerServiceTest {
 
     @Test
     void create_whenNameAlreadyExists_thenThrowBusinessException() {
-        customerService.create(new CustomerRequest("Ahmet Yılmaz", null, null, null));
+        customerService.create(new CustomerRequest("Ahmet Yılmaz", null, null, null, null));
 
-        assertThatThrownBy(() -> customerService.create(new CustomerRequest("Ahmet Yılmaz", "555-9999", null, null)))
+        assertThatThrownBy(() -> customerService.create(new CustomerRequest("Ahmet Yılmaz", "555-9999", null, null, null)))
                 .isInstanceOf(BusinessException.class)
                 .satisfies(ex -> assertThat(((BusinessException) ex).getErrorCode())
                         .isEqualTo(ErrorCode.CUSTOMER_ALREADY_EXISTS));
@@ -82,8 +82,8 @@ class CustomerServiceTest {
 
     @Test
     void getAll_whenCustomersExist_thenReturnList() {
-        customerService.create(new CustomerRequest("Müşteri A", null, null, null));
-        customerService.create(new CustomerRequest("Müşteri B", null, null, null));
+        customerService.create(new CustomerRequest("Müşteri A", null, null, null, null));
+        customerService.create(new CustomerRequest("Müşteri B", null, null, null, null));
 
         List<CustomerResponse> result = customerService.getAll();
 
@@ -92,7 +92,7 @@ class CustomerServiceTest {
 
     @Test
     void getById_whenCustomerExists_thenReturnResponse() {
-        CustomerResponse created = customerService.create(new CustomerRequest("Test Müşteri", "555-0000", null, null));
+        CustomerResponse created = customerService.create(new CustomerRequest("Test Müşteri", "555-0000", null, null, null));
 
         CustomerResponse found = customerService.getById(created.getId());
 

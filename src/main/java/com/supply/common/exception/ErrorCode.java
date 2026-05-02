@@ -27,6 +27,7 @@ public enum ErrorCode {
     // Customer
     CUSTOMER_NOT_FOUND(HttpStatus.NOT_FOUND, "Müşteri bulunamadı"),
     CUSTOMER_ALREADY_EXISTS(HttpStatus.CONFLICT, "Bu müşteri zaten kayıtlı"),
+    CUSTOMER_GROUP_NOT_FOUND(HttpStatus.NOT_FOUND, "Müşteri grubu bulunamadı"),
 
     // Product
     PRODUCT_NOT_FOUND(HttpStatus.NOT_FOUND, "Ürün bulunamadı"),
@@ -42,6 +43,7 @@ public enum ErrorCode {
     // Invoice
     INVOICE_NOT_FOUND(HttpStatus.NOT_FOUND, "Fiş bulunamadı"),
     INVOICE_ALREADY_CLOSED(HttpStatus.BAD_REQUEST, "Fiş zaten kapatılmış"),
+    INVOICE_ALREADY_EXISTS(HttpStatus.CONFLICT, "Bu sipariş için zaten fiş oluşturulmuş"),
     INVOICE_ITEM_NOT_FOUND(HttpStatus.NOT_FOUND, "Fiş kalemi bulunamadı"),
 
     // Payment

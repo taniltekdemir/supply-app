@@ -33,4 +33,8 @@ public class OrderItem extends BaseEntity {
     private BigDecimal quantity;
 
     private String notes;
+
+    public void addQuantity(BigDecimal amount) {
+        this.quantity = this.quantity.add(amount);
+    }
 }

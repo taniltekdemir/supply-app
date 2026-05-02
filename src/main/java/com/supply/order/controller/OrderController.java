@@ -40,8 +40,9 @@ public class OrderController {
 
     @GetMapping
     public ResponseEntity<ApiResponse<List<OrderResponse>>> getOrdersByDate(
-            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
-        return ResponseEntity.ok(ApiResponse.ok(orderService.getOrdersByDate(date)));
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date,
+            @RequestParam(required = false) UUID groupId) {
+        return ResponseEntity.ok(ApiResponse.ok(orderService.getOrdersByDate(date, groupId)));
     }
 
     @GetMapping("/open")
@@ -68,5 +69,11 @@ public class OrderController {
     @PutMapping("/{id}/close")
     public ResponseEntity<ApiResponse<OrderResponse>> closeOrder(@PathVariable UUID id) {
         return ResponseEntity.ok(ApiResponse.ok(orderService.closeOrder(id)));
+    }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<ApiResponse<Void>> deleteOrder(@PathVariable UUID id) {
+        orderService.deleteOrder(id);
+        return ResponseEntity.ok(ApiResponse.ok());
     }
 }

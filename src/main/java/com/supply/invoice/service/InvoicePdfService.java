@@ -4,10 +4,10 @@ import com.lowagie.text.Document;
 import com.lowagie.text.DocumentException;
 import com.lowagie.text.Element;
 import com.lowagie.text.Font;
-import com.lowagie.text.FontFactory;
 import com.lowagie.text.PageSize;
 import com.lowagie.text.Paragraph;
 import com.lowagie.text.Phrase;
+import com.lowagie.text.pdf.BaseFont;
 import com.lowagie.text.pdf.PdfPCell;
 import com.lowagie.text.pdf.PdfPTable;
 import com.lowagie.text.pdf.PdfWriter;
@@ -19,15 +19,42 @@ import com.supply.invoice.entity.InvoiceStatus;
 import org.springframework.stereotype.Service;
 
 import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
 import java.math.BigDecimal;
 
 @Service
 public class InvoicePdfService {
 
-    private static final Font TITLE_FONT = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 18);
-    private static final Font HEADER_FONT = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 11);
-    private static final Font NORMAL_FONT = FontFactory.getFont(FontFactory.HELVETICA, 10);
-    private static final Font SMALL_FONT = FontFactory.getFont(FontFactory.HELVETICA, 9);
+    private static final Font TITLE_FONT;
+    private static final Font HEADER_FONT;
+    private static final Font NORMAL_FONT;
+    private static final Font SMALL_FONT;
+
+    static {
+        try {
+            byte[] fontBytes;
+            try (InputStream fontStream = InvoicePdfService.class.getResourceAsStream("/fonts/DejaVuSans.ttf")) {
+                if (fontStream == null) {
+                    throw new RuntimeException("DejaVuSans.ttf bulunamadı");
+                }
+                fontBytes = fontStream.readAllBytes();
+            }
+            BaseFont bf = BaseFont.createFont(
+                    "DejaVuSans.ttf",
+                    BaseFont.IDENTITY_H,
+                    BaseFont.EMBEDDED,
+                    true,
+                    fontBytes,
+                    null);
+            TITLE_FONT  = new Font(bf, 18, Font.BOLD);
+            HEADER_FONT = new Font(bf, 11, Font.BOLD);
+            NORMAL_FONT = new Font(bf, 10, Font.NORMAL);
+            SMALL_FONT  = new Font(bf,  9, Font.NORMAL);
+        } catch (DocumentException | IOException e) {
+            throw new ExceptionInInitializerError("DejaVuSans.ttf yüklenemedi: " + e.getMessage());
+        }
+    }
 
     public byte[] generate(InvoiceResponse invoice) {
         try (ByteArrayOutputStream baos = new ByteArrayOutputStream()) {
@@ -44,8 +71,6 @@ public class InvoicePdfService {
             document.close();
             return baos.toByteArray();
 
-        } catch (DocumentException e) {
-            throw new BusinessException(ErrorCode.INTERNAL_SERVER_ERROR, "PDF oluşturulamadı");
         } catch (Exception e) {
             throw new BusinessException(ErrorCode.INTERNAL_SERVER_ERROR, "PDF oluşturulamadı");
         }
