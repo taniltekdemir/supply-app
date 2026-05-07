@@ -15,9 +15,9 @@ primary_region = 'ams'
   processes = ['app']
 
 [[vm]]
-  memory = '256mb'
-  cpus = 1
-  memory_mb = 256
+memory = '512mb'
+cpus = 1
+memory_mb = 512
 
 [env]
 SPRING_PROFILES_ACTIVE = "prod"
