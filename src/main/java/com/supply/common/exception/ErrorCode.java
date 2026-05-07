@@ -35,6 +35,7 @@ public enum ErrorCode {
     // Order
     ORDER_NOT_FOUND(HttpStatus.NOT_FOUND, "Sipariş bulunamadı"),
     ORDER_ALREADY_CLOSED(HttpStatus.BAD_REQUEST, "Sipariş zaten kapatılmış"),
+    ORDER_ALREADY_EXISTS(HttpStatus.CONFLICT, "Bu müşteri için bu tarihte zaten sipariş mevcut"),
     ORDER_ITEM_NOT_FOUND(HttpStatus.NOT_FOUND, "Sipariş kalemi bulunamadı"),
 
     // Pricing

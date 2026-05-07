@@ -138,4 +138,15 @@ class OrderServiceTest {
                 .satisfies(ex -> assertThat(((BusinessException) ex).getErrorCode())
                         .isEqualTo(ErrorCode.ORDER_ALREADY_CLOSED));
     }
+
+    @Test
+    void createOrder_whenSameCustomerAndDateAlreadyExists_thenThrowsOrderAlreadyExists() {
+        LocalDate date = LocalDate.of(2025, 1, 15);
+        orderService.createOrder(new OrderRequest(customerId, date));
+
+        assertThatThrownBy(() -> orderService.createOrder(new OrderRequest(customerId, date)))
+                .isInstanceOf(BusinessException.class)
+                .satisfies(ex -> assertThat(((BusinessException) ex).getErrorCode())
+                        .isEqualTo(ErrorCode.ORDER_ALREADY_EXISTS));
+    }
 }

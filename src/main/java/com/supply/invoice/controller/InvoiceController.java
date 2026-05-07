@@ -83,6 +83,12 @@ public class InvoiceController {
         return ResponseEntity.ok(ApiResponse.ok());
     }
 
+    @DeleteMapping("/{id}")
+    public ResponseEntity<ApiResponse<Void>> deleteInvoice(@PathVariable UUID id) {
+        invoiceService.deleteInvoice(id);
+        return ResponseEntity.ok(ApiResponse.ok());
+    }
+
     @PutMapping("/{id}/close")
     public ResponseEntity<ApiResponse<InvoiceResponse>> closeInvoice(@PathVariable UUID id) {
         return ResponseEntity.ok(ApiResponse.ok(invoiceService.closeInvoice(id)));

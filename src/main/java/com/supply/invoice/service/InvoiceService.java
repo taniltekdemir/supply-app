@@ -100,6 +100,15 @@ public class InvoiceService {
         return toResponse(saved);
     }
 
+    public void deleteInvoice(UUID invoiceId) {
+        Invoice invoice = findByIdOrThrow(invoiceId);
+        if (invoice.getStatus() == InvoiceStatus.CLOSED) {
+            throw new BusinessException(ErrorCode.INVOICE_ALREADY_CLOSED);
+        }
+        invoiceItemRepository.deleteAllByInvoice(invoice);
+        invoiceRepository.delete(invoice);
+    }
+
     public InvoiceItemResponse addItem(UUID invoiceId, InvoiceItemRequest request) {
         Invoice invoice = findOpenInvoiceOrThrow(invoiceId);
         Product product = productService.findByIdOrThrow(request.getProductId());

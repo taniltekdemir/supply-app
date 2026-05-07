@@ -310,4 +310,40 @@ class InvoiceServiceTest {
                 .satisfies(ex -> assertThat(((BusinessException) ex).getErrorCode())
                         .isEqualTo(ErrorCode.PRICE_NOT_FOUND));
     }
+
+    @Test
+    void deleteInvoice_whenOpen_thenInvoiceDeleted() {
+        InvoiceResponse invoice = invoiceService.createInvoice(new InvoiceRequest(customerId, TEST_DATE));
+        invoiceService.addItem(invoice.getId(), new InvoiceItemRequest(productId, BigDecimal.valueOf(2.0), null));
+
+        invoiceService.deleteInvoice(invoice.getId());
+
+        assertThatThrownBy(() -> invoiceService.getById(invoice.getId()))
+                .isInstanceOf(BusinessException.class)
+                .satisfies(ex -> assertThat(((BusinessException) ex).getErrorCode())
+                        .isEqualTo(ErrorCode.INVOICE_NOT_FOUND));
+    }
+
+    @Test
+    void deleteInvoice_whenClosed_thenThrowsInvoiceAlreadyClosed() {
+        InvoiceResponse invoice = invoiceService.createInvoice(new InvoiceRequest(customerId, TEST_DATE));
+        invoiceService.closeInvoice(invoice.getId());
+
+        assertThatThrownBy(() -> invoiceService.deleteInvoice(invoice.getId()))
+                .isInstanceOf(BusinessException.class)
+                .satisfies(ex -> assertThat(((BusinessException) ex).getErrorCode())
+                        .isEqualTo(ErrorCode.INVOICE_ALREADY_CLOSED));
+    }
+
+    @Test
+    void createInvoiceFromOrder_whenAlreadyExists_thenThrowsInvoiceAlreadyExists() {
+        var order = orderService.createOrder(new OrderRequest(customerId, TEST_DATE));
+        orderService.addItemToOrder(order.getId(), new OrderItemRequest(productId, BigDecimal.valueOf(1.0), null));
+        invoiceService.createInvoiceFromOrder(order.getId());
+
+        assertThatThrownBy(() -> invoiceService.createInvoiceFromOrder(order.getId()))
+                .isInstanceOf(BusinessException.class)
+                .satisfies(ex -> assertThat(((BusinessException) ex).getErrorCode())
+                        .isEqualTo(ErrorCode.INVOICE_ALREADY_EXISTS));
+    }
 }

@@ -37,6 +37,10 @@ public class OrderService {
         Tenant tenant = currentTenant();
         var customer = customerService.findByIdOrThrow(request.getCustomerId());
 
+        if (orderRepository.existsByTenantAndCustomerAndOrderDate(tenant, customer, request.getOrderDate())) {
+            throw new BusinessException(ErrorCode.ORDER_ALREADY_EXISTS);
+        }
+
         Order order = Order.builder()
                 .tenant(tenant)
                 .customer(customer)

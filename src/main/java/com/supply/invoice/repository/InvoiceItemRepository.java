@@ -12,4 +12,6 @@ import java.util.UUID;
 public interface InvoiceItemRepository extends JpaRepository<InvoiceItem, UUID> {
 
     List<InvoiceItem> findAllByInvoice(Invoice invoice);
+
+    void deleteAllByInvoice(Invoice invoice);
 }

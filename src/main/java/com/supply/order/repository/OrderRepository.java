@@ -1,5 +1,6 @@
 package com.supply.order.repository;
 
+import com.supply.order.entity.Customer;
 import com.supply.order.entity.Order;
 import com.supply.order.entity.OrderStatus;
 import com.supply.tenant.entity.Tenant;
@@ -26,4 +27,6 @@ public interface OrderRepository extends JpaRepository<Order, UUID> {
 
     List<Order> findAllByTenantAndOrderDateAndCustomer_Group_Id(
             Tenant tenant, LocalDate orderDate, UUID groupId);
+
+    boolean existsByTenantAndCustomerAndOrderDate(Tenant tenant, Customer customer, LocalDate orderDate);
 }
