@@ -1,0 +1,13 @@
+spring:
+  datasource:
+    url: ${DATABASE_URL}
+    username: ${DB_USERNAME:postgres}
+    password: ${DB_PASSWORD:}
+  flyway:
+    enabled: true
+    locations: classpath:db/migration/common
+
+security:
+  jwt:
+    secret: ${JWT_SECRET}
+    expiration: 86400000
