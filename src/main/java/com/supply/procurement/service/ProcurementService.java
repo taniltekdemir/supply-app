@@ -5,7 +5,6 @@ import com.supply.common.exception.ErrorCode;
 import com.supply.common.tenant.TenantContext;
 import com.supply.order.entity.Order;
 import com.supply.order.entity.OrderItem;
-import com.supply.order.entity.OrderStatus;
 import com.supply.order.entity.Product;
 import com.supply.order.repository.OrderItemRepository;
 import com.supply.order.repository.OrderRepository;
@@ -43,7 +42,7 @@ public class ProcurementService {
         Tenant tenant = currentTenant();
 
         List<Order> openOrders = orderRepository
-                .findAllByTenantAndOrderDateAndStatus(tenant, date, OrderStatus.OPEN);
+                .findAllByTenantAndOrderDate(tenant, date);
 
         List<OrderItem> allItems = openOrders.stream()
                 .flatMap(order -> orderItemRepository.findAllByOrder(order).stream())

@@ -140,6 +140,14 @@ public class InvoiceService {
         invoice.close();
         Invoice saved = invoiceRepository.save(invoice);
 
+        if (saved.getOrder() != null) {
+            orderRepository.findById(saved.getOrder().getId())
+                    .ifPresent(order -> {
+                        order.close();
+                        orderRepository.save(order);
+                    });
+        }
+
         List<InvoiceItem> items = invoiceItemRepository.findAllByInvoice(saved);
         BigDecimal total = items.stream()
                 .map(InvoiceItem::getLineTotal)
