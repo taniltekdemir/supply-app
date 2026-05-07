@@ -48,6 +48,14 @@ public class PricingController {
         return ResponseEntity.ok(ApiResponse.ok(pricingService.getPriceByProductAndDate(productId, date)));
     }
 
+    @GetMapping("/product/{productId}/latest")
+    public ResponseEntity<ApiResponse<DailyPriceResponse>> getLatestPriceByProduct(
+            @PathVariable UUID productId) {
+        return pricingService.getLatestPriceByProduct(productId)
+                .map(price -> ResponseEntity.ok(ApiResponse.ok(price)))
+                .orElse(ResponseEntity.ok(ApiResponse.ok()));
+    }
+
     @GetMapping("/range")
     public ResponseEntity<ApiResponse<List<DailyPriceResponse>>> getPricesInRange(
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate start,

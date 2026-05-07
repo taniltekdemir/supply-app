@@ -21,4 +21,6 @@ public interface DailyPriceRepository extends JpaRepository<DailyPrice, UUID> {
     List<DailyPrice> findAllByTenantAndDateBetween(Tenant tenant, LocalDate start, LocalDate end);
 
     boolean existsByTenantAndProductAndDate(Tenant tenant, Product product, LocalDate date);
+
+    Optional<DailyPrice> findTopByTenantAndProductOrderByDateDesc(Tenant tenant, Product product);
 }

@@ -81,6 +81,14 @@ public class PricingService {
                 .toList();
     }
 
+    @Transactional(readOnly = true)
+    public Optional<DailyPriceResponse> getLatestPriceByProduct(UUID productId) {
+        var product = productService.findByIdOrThrow(productId);
+        return dailyPriceRepository
+                .findTopByTenantAndProductOrderByDateDesc(currentTenant(), product)
+                .map(this::toResponse);
+    }
+
     private Tenant currentTenant() {
         return tenantRepository.findById(TenantContext.get())
                 .orElseThrow(() -> new BusinessException(ErrorCode.TENANT_NOT_FOUND));
