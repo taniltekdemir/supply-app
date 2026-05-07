@@ -75,7 +75,8 @@ public class CustomerGroupService {
     }
 
     private Tenant currentTenant() {
-        return tenantRepository.getReferenceById(TenantContext.get());
+        return tenantRepository.findById(TenantContext.get())
+                .orElseThrow(() -> new BusinessException(ErrorCode.TENANT_NOT_FOUND));
     }
 
     public CustomerGroupResponse toResponse(CustomerGroup group) {

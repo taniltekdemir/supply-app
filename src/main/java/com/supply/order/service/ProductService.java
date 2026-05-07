@@ -65,7 +65,8 @@ public class ProductService {
     }
 
     private Tenant currentTenant() {
-        return tenantRepository.getReferenceById(TenantContext.get());
+        return tenantRepository.findById(TenantContext.get())
+                .orElseThrow(() -> new BusinessException(ErrorCode.TENANT_NOT_FOUND));
     }
 
     public ProductResponse toResponse(Product product) {

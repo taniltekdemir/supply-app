@@ -1,5 +1,7 @@
 package com.supply.procurement.service;
 
+import com.supply.common.exception.BusinessException;
+import com.supply.common.exception.ErrorCode;
 import com.supply.common.tenant.TenantContext;
 import com.supply.order.entity.Order;
 import com.supply.order.entity.OrderItem;
@@ -112,6 +114,7 @@ public class ProcurementService {
     }
 
     private Tenant currentTenant() {
-        return tenantRepository.getReferenceById(TenantContext.get());
+        return tenantRepository.findById(TenantContext.get())
+                .orElseThrow(() -> new BusinessException(ErrorCode.TENANT_NOT_FOUND));
     }
 }

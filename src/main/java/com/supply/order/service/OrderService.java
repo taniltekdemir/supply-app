@@ -135,7 +135,8 @@ public class OrderService {
     }
 
     private Tenant currentTenant() {
-        return tenantRepository.getReferenceById(TenantContext.get());
+        return tenantRepository.findById(TenantContext.get())
+                .orElseThrow(() -> new BusinessException(ErrorCode.TENANT_NOT_FOUND));
     }
 
     private OrderResponse toResponse(Order order) {
